@@ -1,5 +1,7 @@
 # Fantasy Football Draft Team Lottery
 
+![Fantasy Football Draft Team Lottery](public/banner.png)
+
 A sleek, animated draft lottery application for fantasy football leagues. Turn your draft order selection into an exciting event with countdown timers, weighted odds based on standings, and a visually stunning interface.
 
 ## Features
