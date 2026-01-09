@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Play, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Trophy, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import type { Team } from './interfaces/Team';
-import teams from './data/Teams';
+import DraftSetup from './components/DraftSetup';
 import './App.css';
 
 interface DraftedTeam extends Team {
@@ -14,7 +14,18 @@ interface LotteryOdds {
   drawings: number;
 }
 
+interface DraftConfig {
+  teams: Team[];
+  totalTeams: number;
+  lotteryTeams: number;
+  draftName: string;
+  pickCountdown: number;
+}
+
 export default function NFLDraftAnimator() {
+  const [page, setPage] = useState<'setup' | 'draft'>('setup');
+  const [draftConfig, setDraftConfig] = useState<DraftConfig | null>(null);
+
   const [drafted, setDrafted] = useState<DraftedTeam[]>([]);
   const [current, setCurrent] = useState<Team | null>(null);
   const [isDrafting, setIsDrafting] = useState(false);
@@ -23,6 +34,29 @@ export default function NFLDraftAnimator() {
   const [lotteryOdds, setLotteryOdds] = useState<LotteryOdds[]>([]);
   const [totalDrawings, setTotalDrawings] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
+
+  const handleStartDraft = (teams: Team[], totalTeams: number, lotteryTeams: number, draftName: string, pickCountdown: number) => {
+    setDraftConfig({ teams, totalTeams, lotteryTeams, draftName, pickCountdown });
+    setPage('draft');
+    setDrafted([]);
+    setCurrent(null);
+    setIsDrafting(false);
+    setShowCurrent(false);
+    setCountdown(null);
+    setLotteryOdds([]);
+    setTotalDrawings(0);
+    setCarouselIndex(0);
+  };
+
+  const goToSetup = () => {
+    setPage('setup');
+    setDrafted([]);
+    setCurrent(null);
+    setIsDrafting(false);
+    setShowCurrent(false);
+    setCountdown(null);
+    setLotteryOdds([]);
+  };
 
   const standingToString = (place: number): string => {
     if (place === 1) return '1st';
@@ -48,18 +82,25 @@ export default function NFLDraftAnimator() {
   const weightedRandomPick = (remainingTeams: Team[]): Team => {
     const totalWeight = remainingTeams.reduce((sum, team) => sum + team.standing, 0);
     let random = Math.random() * totalWeight;
-    
+
     for (const team of remainingTeams) {
       random -= team.standing;
       if (random <= 0) {
         return team;
       }
     }
-    
+
     return remainingTeams[remainingTeams.length - 1];
   };
 
   const startDraft = () => {
+    if (!draftConfig) return;
+
+    const { teams, totalTeams, lotteryTeams, pickCountdown } = draftConfig;
+    const reservedSpots = totalTeams - lotteryTeams;
+    const firstPick = reservedSpots + 1;
+    const lastPick = totalTeams;
+
     setDrafted([]);
     setCurrent(null);
     setIsDrafting(true);
@@ -73,14 +114,15 @@ export default function NFLDraftAnimator() {
     setLotteryOdds(calculateLotteryOdds(remainingTeams));
 
     let delay = 0;
-    const COUNTDOWN = 15;
+    const COUNTDOWN = pickCountdown;
+    const secondToLastPick = lastPick - 1;
 
-    for (let pickNum = 3; pickNum <= 11; pickNum++) {
+    for (let pickNum = firstPick; pickNum <= secondToLastPick; pickNum++) {
       setTimeout(() => {
         const currentRemaining = remainingTeams;
         const odds = calculateLotteryOdds(currentRemaining);
         const currentTotal = currentRemaining.reduce((sum, team) => sum + team.standing, 0);
-        
+
         setLotteryOdds(odds);
         setTotalDrawings(currentTotal);
 
@@ -90,26 +132,26 @@ export default function NFLDraftAnimator() {
           }, (COUNTDOWN - i) * 1000);
         }
 
-        if (pickNum === 11) {
+        if (pickNum === secondToLastPick) {
           setTimeout(() => {
             setCountdown(null);
-            const firstPick = weightedRandomPick(currentRemaining);
-            let secondPick: Team;
+            const firstPickTeam = weightedRandomPick(currentRemaining);
+            let secondPickTeam: Team;
             do {
-              secondPick = weightedRandomPick(currentRemaining);
-            } while (secondPick.name === firstPick.name);
+              secondPickTeam = weightedRandomPick(currentRemaining);
+            } while (secondPickTeam.name === firstPickTeam.name);
 
             setCurrent(null);
             setShowCurrent(true);
 
             setTimeout(() => {
               setDrafted(prev => [
-                { ...secondPick, pick: 12 },
-                { ...firstPick, pick: 11 },
+                { ...secondPickTeam, pick: lastPick },
+                { ...firstPickTeam, pick: secondToLastPick },
                 ...prev
               ]);
-              remainingTeams = remainingTeams.filter(t => t.name !== firstPick.name && t.name !== secondPick.name);
-              
+              remainingTeams = remainingTeams.filter(t => t.name !== firstPickTeam.name && t.name !== secondPickTeam.name);
+
               const updatedOdds = calculateLotteryOdds(remainingTeams);
               const updatedTotal = remainingTeams.reduce((sum, team) => sum + team.standing, 0);
               setLotteryOdds(updatedOdds);
@@ -122,7 +164,7 @@ export default function NFLDraftAnimator() {
         setTimeout(() => {
           setCountdown(null);
           const selectedTeam = weightedRandomPick(currentRemaining);
-          
+
           setCurrent(selectedTeam);
           setShowCurrent(true);
 
@@ -130,7 +172,7 @@ export default function NFLDraftAnimator() {
             setDrafted(prev => [{ ...selectedTeam, pick: pickNum }, ...prev]);
             setShowCurrent(false);
             remainingTeams = remainingTeams.filter(t => t.name !== selectedTeam.name);
-            
+
             const updatedOdds = calculateLotteryOdds(remainingTeams);
             const updatedTotal = remainingTeams.reduce((sum, team) => sum + team.standing, 0);
             setLotteryOdds(updatedOdds);
@@ -149,10 +191,25 @@ export default function NFLDraftAnimator() {
     }, delay + 2000);
   };
 
+  if (page === 'setup') {
+    return <DraftSetup onStartDraft={handleStartDraft} />;
+  }
+
+  if (!draftConfig) {
+    return <DraftSetup onStartDraft={handleStartDraft} />;
+  }
+
+  const { totalTeams, lotteryTeams, draftName } = draftConfig;
+  const reservedSpots = totalTeams - lotteryTeams;
+
+  const reservedTeams: DraftedTeam[] = [];
+  for (let i = reservedSpots; i >= 1; i--) {
+    reservedTeams.push({ name: 'Reserved', icon: '👤', color: '#64748b', pick: i, standing: 0 });
+  }
+
   const allDraftedWithReserved = [
     ...drafted,
-    { name: 'Reserved', icon: '👤', color: '#64748b', pick: 2, standing: 0 },
-    { name: 'Reserved', icon: '👤', color: '#64748b', pick: 1, standing: 0 }
+    ...reservedTeams
   ].sort((a, b) => b.pick - a.pick);
 
   const itemsPerPage = 6;
@@ -170,11 +227,20 @@ export default function NFLDraftAnimator() {
             <div className="text-center mb-4">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Trophy className="w-10 h-10 text-yellow-400" />
-                <h1 className="text-5xl font-bold">Fantasy and Furious</h1>
+                <h1 className="text-5xl font-bold">{draftName}</h1>
                 <Trophy className="w-10 h-10 text-yellow-400" />
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
               <p className="text-blue-300 text-lg">Weighted lottery based on standings!</p>
+              {!isDrafting && (
+                <button
+                  onClick={goToSetup}
+                  className="mt-2 text-slate-400 hover:text-white transition-colors flex items-center gap-2 mx-auto"
+                >
+                  <Settings className="w-4 h-4" />
+                  Edit Draft Settings
+                </button>
+              )}
             </div>
             <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-4 min-h-[200px] flex flex-col items-center justify-center border border-slate-700">
               {!isDrafting && drafted.length === 0 && (
@@ -210,11 +276,11 @@ export default function NFLDraftAnimator() {
                 <div className="text-center animate-in fade-in zoom-in duration-500">
                   <div className="text-6xl mb-6">🎲🎲</div>
                   <h2 className="text-3xl font-bold mb-4">Double Selection!</h2>
-                  <p className="text-xl text-blue-300">Picks #11 and #12 selected simultaneously</p>
+                  <p className="text-xl text-blue-300">Picks #{totalTeams - 1} and #{totalTeams} selected simultaneously</p>
                 </div>
               )}
 
-              {!isDrafting && drafted.length === 10 && (
+              {!isDrafting && drafted.length === lotteryTeams && (
                 <div className="text-center animate-in fade-in zoom-in duration-500">
                   <div className="text-6xl mb-6">🎉</div>
                   <h2 className="text-4xl font-bold mb-4">Draft Complete!</h2>
@@ -231,18 +297,18 @@ export default function NFLDraftAnimator() {
             {(drafted.length > 0 || isDrafting) && (
               <div className="mt-4 bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700">
                 <h3 className="text-2xl font-bold mb-4 text-center">Draft Board</h3>
-                
+
                 <div className="relative">
                   <div className="grid grid-cols-6 gap-3">
                     {visibleItems.map((team, idx) => (
                       <div
                         key={`${team.pick}-${idx}`}
                         className={`${
-                          team.name === 'Reserved' 
-                            ? 'bg-slate-700/30 border-2 border-dashed border-slate-600' 
+                          team.name === 'Reserved'
+                            ? 'bg-slate-700/30 border-2 border-dashed border-slate-600'
                             : 'bg-slate-700/50'
                         } rounded-lg p-4 flex flex-col items-center gap-2`}
-                        style={{ 
+                        style={{
                           borderLeft: team.name !== 'Reserved' ? `4px solid ${team.color}` : undefined
                         }}
                       >
@@ -271,7 +337,7 @@ export default function NFLDraftAnimator() {
                       >
                         <ChevronLeft className="w-6 h-6" />
                       </button>
-                      
+
                       <div className="flex gap-2">
                         {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
                           <button
