@@ -19,7 +19,7 @@ interface DraftSetupProps {
 }
 
 export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
-  const [draftName, setDraftName] = useState('Fantasy and Furious');
+  const [draftName, setDraftName] = useState('My Fantasy Draft');
   const [totalTeams, setTotalTeams] = useState(12);
   const [lotteryTeams, setLotteryTeams] = useState(10);
   const [pickCountdown, setPickCountdown] = useState(15);
