@@ -39,7 +39,6 @@ export default function NFLDraftAnimator() {
   const { code } = useParams<{ code?: string }>();
   const navigate = useNavigate();
   const {
-    isConnected,
     isHost,
     roomCode,
     viewerCount,

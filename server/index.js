@@ -1,6 +1,51 @@
 import { WebSocketServer } from 'ws';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse } from 'node:url';
 
-const PORT = process.env.WS_PORT || 3001;
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const PORT = process.env.PORT || 3001;
+const DIST_DIR = join(__dirname, '..', 'dist');
+
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+// HTTP server — serves the Vite-built static files and falls back to index.html for SPA routing
+const server = createServer(async (req, res) => {
+  try {
+    const urlPath = parse(req.url).pathname;
+    let filePath = join(DIST_DIR, urlPath === '/' ? 'index.html' : urlPath);
+
+    if (!existsSync(filePath) || !extname(filePath)) {
+      // Fallback to index.html for client-side routes
+      filePath = join(DIST_DIR, 'index.html');
+    }
+
+    const ext = extname(filePath);
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const content = await readFile(filePath);
+
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content);
+  } catch {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
 
 // Store rooms: { code: { host: ws, viewers: Set<ws>, state: object } }
 const rooms = new Map();
@@ -19,9 +64,8 @@ function generateRoomCode() {
   return code;
 }
 
-const wss = new WebSocketServer({ port: PORT });
-
-console.log(`WebSocket server running on ws://localhost:${PORT}`);
+// WebSocket server attached to the same HTTP server (same port)
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   let currentRoom = null;
@@ -196,3 +240,7 @@ setInterval(() => {
     }
   });
 }, 30000); // Check every 30 seconds
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
