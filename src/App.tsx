@@ -22,6 +22,7 @@ interface DraftConfig {
   lotteryTeams: number;
   draftName: string;
   pickCountdown: number;
+  reservedNames: string[];
 }
 
 interface DraftState {
@@ -112,8 +113,15 @@ export default function NFLDraftAnimator() {
     }
   }, [roomCode, isHost, code, navigate]);
 
-  const handleStartDraft = (teams: Team[], totalTeams: number, lotteryTeams: number, draftName: string, pickCountdown: number) => {
-    const config = { teams, totalTeams, lotteryTeams, draftName, pickCountdown };
+  const handleStartDraft = (
+    teams: Team[],
+    totalTeams: number,
+    lotteryTeams: number,
+    draftName: string,
+    pickCountdown: number,
+    reservedNames: string[],
+  ) => {
+    const config = { teams, totalTeams, lotteryTeams, draftName, pickCountdown, reservedNames };
     setDraftConfig(config);
     setPage('draft');
     setDrafted([]);
@@ -330,13 +338,16 @@ export default function NFLDraftAnimator() {
     return <DraftSetup onStartDraft={handleStartDraft} />;
   }
 
-  const { totalTeams, lotteryTeams, draftName } = draftConfig;
+  const { totalTeams, lotteryTeams, draftName, reservedNames } = draftConfig;
   const reservedSpots = totalTeams - lotteryTeams;
 
-  const reservedTeams: DraftedTeam[] = [];
-  for (let i = reservedSpots; i >= 1; i--) {
-    reservedTeams.push({ name: 'Reserved', icon: '👤', color: '#64748b', pick: i, standing: 0 });
-  }
+  const reservedTeams: DraftedTeam[] = Array.from({ length: reservedSpots }, (_, index) => ({
+    name: reservedNames[index] || `Reserved spot ${index + 1}`,
+    icon: '👤',
+    color: '#64748b',
+    pick: index + 1,
+    standing: 0,
+  }));
 
   const allDraftedWithReserved = [
     ...drafted,
@@ -476,24 +487,24 @@ export default function NFLDraftAnimator() {
                       <div
                         key={`${team.pick}-${idx}`}
                         className={`${
-                          team.name === 'Reserved'
+                          team.standing === 0
                             ? 'bg-slate-700/30 border-2 border-dashed border-slate-600'
                             : 'bg-slate-700/50'
                         } rounded-lg p-4 flex flex-col items-center gap-2`}
                         style={{
-                          borderLeft: team.name !== 'Reserved' ? `4px solid ${team.color}` : undefined
+                          borderLeft: team.standing !== 0 ? `4px solid ${team.color}` : undefined
                         }}
                       >
-                        <div className={`text-4xl ${team.name === 'Reserved' ? 'opacity-30' : ''}`}>
+                        <div className={`text-4xl ${team.standing === 0 ? 'opacity-30' : ''}`}>
                           {team.icon}
                         </div>
                         <div className="text-center">
-                          <div className={`font-semibold text-xs ${team.name === 'Reserved' ? 'text-slate-400' : ''}`}>
+                          <div className={`font-semibold text-xs ${team.standing === 0 ? 'text-slate-400' : ''}`}>
                             {team.name}
                           </div>
                           <div className="text-xs text-slate-400">Pick #{team.pick}</div>
                         </div>
-                        <div className={`text-2xl font-bold ${team.name === 'Reserved' ? 'text-slate-600' : 'text-slate-500'}`}>
+                        <div className={`text-2xl font-bold ${team.standing === 0 ? 'text-slate-600' : 'text-slate-500'}`}>
                           {team.pick}
                         </div>
                       </div>

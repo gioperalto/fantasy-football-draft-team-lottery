@@ -15,7 +15,14 @@ const COLOR_OPTIONS = [
 ];
 
 interface DraftSetupProps {
-  onStartDraft: (teams: Team[], totalTeams: number, lotteryTeams: number, draftName: string, pickCountdown: number) => void;
+  onStartDraft: (
+    teams: Team[],
+    totalTeams: number,
+    lotteryTeams: number,
+    draftName: string,
+    pickCountdown: number,
+    reservedNames: string[],
+  ) => void;
 }
 
 export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
@@ -24,7 +31,9 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
   const [lotteryTeams, setLotteryTeams] = useState(10);
   const [pickCountdown, setPickCountdown] = useState(15);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [reservedNames, setReservedNames] = useState<string[]>(['', '']);
   const [showPreview, setShowPreview] = useState(false);
+  const reservedSpots = totalTeams - lotteryTeams;
 
   useEffect(() => {
     const currentCount = teams.length;
@@ -44,21 +53,31 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
     }
   }, [lotteryTeams]);
 
+  useEffect(() => {
+    setReservedNames((currentNames) =>
+      Array.from({ length: reservedSpots }, (_, index) => currentNames[index] || '')
+    );
+  }, [reservedSpots]);
   const updateTeam = (index: number, field: keyof Team, value: string | number) => {
     const updated = [...teams];
     updated[index] = { ...updated[index], [field]: value };
     setTeams(updated);
   };
 
-  const reservedSpots = totalTeams - lotteryTeams;
+  const updateReservedName = (index: number, value: string) => {
+    setReservedNames((currentNames) =>
+      currentNames.map((name, nameIndex) => nameIndex === index ? value : name)
+    );
+  };
 
   const isValid = teams.every(t => t.name.trim() !== '') &&
     teams.every(t => t.standing >= 1) &&
+    reservedNames.every(name => name.trim() !== '') &&
     draftName.trim() !== '';
 
   const handleStartDraft = () => {
     if (isValid) {
-      onStartDraft(teams, totalTeams, lotteryTeams, draftName, pickCountdown);
+      onStartDraft(teams, totalTeams, lotteryTeams, draftName, pickCountdown, reservedNames);
     }
   };
 
@@ -172,6 +191,22 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
               <p className="text-slate-400 text-sm mt-1">
                 Lottery winners will be assigned picks {reservedSpots + 1} through {totalTeams}
               </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {reservedNames.map((name, index) => (
+                  <div key={index}>
+                    <label className="block text-xs text-slate-300 mb-1">
+                      Pick {index + 1} owner
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => updateReservedName(index, e.target.value)}
+                      placeholder={`Who gets pick ${index + 1}?`}
+                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -264,7 +299,11 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
 
         {!isValid && (
           <p className="text-center text-red-400 mt-4">
-            {draftName.trim() === '' ? 'Please enter a draft name' : 'Please fill in all team names'}
+            {draftName.trim() === ''
+              ? 'Please enter a draft name'
+              : reservedNames.some(name => name.trim() === '')
+                ? 'Please enter an owner for every reserved pick'
+                : 'Please fill in all team names'}
           </p>
         )}
       </div>
@@ -314,7 +353,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                           </div>
                           <div className="text-center">
                             <div className={`font-semibold text-xs ${isReserved ? 'text-slate-400' : 'text-slate-300'}`}>
-                              {isReserved ? 'Reserved' : 'TBD'}
+                              {isReserved ? reservedNames[pickNum - 1] || `Reserved spot ${pickNum}` : 'TBD'}
                             </div>
                             <div className="text-xs text-slate-400">Pick #{pickNum}</div>
                           </div>

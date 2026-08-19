@@ -7,6 +7,7 @@ interface DraftState {
     lotteryTeams: number;
     draftName: string;
     pickCountdown: number;
+    reservedNames: string[];
   } | null;
   drafted: Array<{ name: string; icon: string; color: string; standing: number; pick: number }>;
   current: { name: string; icon: string; color: string; standing: number } | null;
