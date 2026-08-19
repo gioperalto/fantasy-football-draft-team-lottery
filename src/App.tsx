@@ -360,16 +360,18 @@ export default function NFLDraftAnimator() {
     carouselIndex * itemsPerPage,
     (carouselIndex + 1) * itemsPerPage
   );
+  const completedBoardItems = [...allDraftedWithReserved].sort((a, b) => a.pick - b.pick);
+  const isDraftComplete = !isDrafting && drafted.length === lotteryTeams;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4">
-      <div className="max-w-8xl mx-auto">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           <div className="flex-1">
             <div className="text-center mb-4">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Trophy className="w-10 h-10 text-yellow-400" />
-                <h1 className="text-5xl font-bold">{draftName}</h1>
+                <h1 className="text-3xl sm:text-5xl font-bold break-words">{draftName}</h1>
                 <Trophy className="w-10 h-10 text-yellow-400" />
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
@@ -477,12 +479,12 @@ export default function NFLDraftAnimator() {
               )}
             </div>
 
-            {(drafted.length > 0 || isDrafting) && (
-              <div className="mt-4 bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700">
-                <h3 className="text-2xl font-bold mb-4 text-center">Draft Board</h3>
+            {!isDraftComplete && (drafted.length > 0 || isDrafting) && (
+              <div className="mt-4 bg-slate-800/50 backdrop-blur rounded-2xl p-4 sm:p-6 border border-slate-700">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 text-center">Draft Board</h3>
 
                 <div className="relative">
-                  <div className="grid grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
                     {visibleItems.map((team, idx) => (
                       <div
                         key={`${team.pick}-${idx}`}
@@ -545,10 +547,54 @@ export default function NFLDraftAnimator() {
                 </div>
               </div>
             )}
+
+            {isDraftComplete && (
+              <div className="mt-4 bg-slate-800/50 backdrop-blur rounded-2xl p-4 sm:p-6 border border-slate-700">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold">Final Draft Board</h3>
+                  <span className="text-sm text-green-300">{completedBoardItems.length} picks</span>
+                </div>
+
+                <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                  {completedBoardItems.map((team) => (
+                    <div
+                      key={`completed-grid-${team.pick}`}
+                      className={`${team.standing === 0 ? 'bg-slate-700/30 border-2 border-dashed border-slate-600' : 'bg-slate-700/50'} rounded-lg p-4 flex flex-col items-center gap-2`}
+                      style={{ borderLeft: team.standing !== 0 ? `4px solid ${team.color}` : undefined }}
+                    >
+                      <div className={`text-4xl ${team.standing === 0 ? 'opacity-30' : ''}`}>{team.icon}</div>
+                      <div className="text-center min-w-0 w-full">
+                        <div className={`font-semibold text-sm truncate ${team.standing === 0 ? 'text-slate-400' : ''}`} title={team.name}>
+                          {team.name}
+                        </div>
+                        <div className="text-xs text-slate-400">Pick #{team.pick}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="sm:hidden space-y-2">
+                  {completedBoardItems.map((team) => (
+                    <div
+                      key={`completed-list-${team.pick}`}
+                      className={`${team.standing === 0 ? 'bg-slate-700/30 border-dashed' : 'bg-slate-700/50'} border border-slate-600 rounded-lg px-3 py-2 flex items-center gap-3`}
+                      style={{ borderLeft: team.standing !== 0 ? `4px solid ${team.color}` : undefined }}
+                    >
+                      <div className="w-10 text-center text-lg font-bold text-slate-400">{team.pick}</div>
+                      <div className={`text-2xl ${team.standing === 0 ? 'opacity-40' : ''}`}>{team.icon}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold truncate">{team.name}</div>
+                        <div className="text-xs text-slate-400">Draft position {team.pick}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="w-80 max-h-dvh overflow-y-scroll ">
-            <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700 sticky top-8">
+          <div className="w-full lg:w-80 max-h-none lg:max-h-dvh overflow-visible lg:overflow-y-scroll">
+            <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-4 sm:p-6 border border-slate-700 lg:sticky lg:top-8">
               <h3 className="text-2xl font-bold mb-4 text-center">
                 Lottery Odds
                 <span className="text-sm text-slate-400 block mt-1">

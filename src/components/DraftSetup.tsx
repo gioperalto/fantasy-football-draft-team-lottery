@@ -118,7 +118,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Total Teams in Draft
@@ -221,8 +221,8 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                 className="bg-slate-700/50 rounded-lg p-4 border border-slate-600"
                 style={{ borderLeftColor: team.color, borderLeftWidth: '4px' }}
               >
-                <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  <div className="col-span-1 sm:col-span-4">
                     <label className="block text-xs text-slate-400 mb-1">Team Name</label>
                     <input
                       type="text"
@@ -233,7 +233,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                     />
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="block text-xs text-slate-400 mb-1">Standing</label>
                     <input
                       type="number"
@@ -244,7 +244,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                     />
                   </div>
 
-                  <div className="col-span-3">
+                  <div className="col-span-1 sm:col-span-3">
                     <label className="block text-xs text-slate-400 mb-1">Icon</label>
                     <div className="flex flex-wrap gap-1">
                       {EMOJI_OPTIONS.map((emoji) => (
@@ -259,7 +259,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                     </div>
                   </div>
 
-                  <div className="col-span-3">
+                  <div className="col-span-1 sm:col-span-3">
                     <label className="block text-xs text-slate-400 mb-1">Color</label>
                     <div className="flex flex-wrap gap-1">
                       {COLOR_OPTIONS.map((color) => (
@@ -278,7 +278,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
           </div>
         </div>
 
-        <div className="flex justify-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
           <button
             onClick={() => setShowPreview(true)}
             disabled={!isValid}
@@ -332,7 +332,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                 <p className="text-blue-300">Weighted lottery based on standings!</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
                   <h3 className="text-xl font-bold mb-4 text-center">Draft Board Preview</h3>
                   <div className="grid grid-cols-3 gap-2">
