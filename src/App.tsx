@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Trophy, ChevronLeft, ChevronRight, Settings, Users, Copy, Check, Link } from 'lucide-react';
 import type { Team } from './interfaces/Team';
@@ -61,6 +61,11 @@ export default function NFLDraftAnimator() {
   const [totalDrawings, setTotalDrawings] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [savedResultUrl, setSavedResultUrl] = useState<string | null>(null);
+  const [savingResult, setSavingResult] = useState(false);
+  const [resultSaveError, setResultSaveError] = useState<string | null>(null);
+  const [showRedraftWarning, setShowRedraftWarning] = useState(false);
+  const lastSavedResult = useRef<string | null>(null);
 
   // Determine if we're in viewer mode (joined via URL with code)
   const isViewer = !!code && !isHost;
@@ -105,6 +110,46 @@ export default function NFLDraftAnimator() {
       broadcastState(state);
     }
   }, [isHost, roomCode, page, draftConfig, drafted, current, isDrafting, showCurrent, countdown, lotteryOdds, totalDrawings, broadcastState]);
+
+  // Persist the completed result to the Railway-backed API. The room code is the
+  // stable result ID, so a later completed redraft intentionally overwrites it.
+  useEffect(() => {
+    if (!isHost || !roomCode || !draftConfig || isDrafting || drafted.length !== draftConfig.lotteryTeams) {
+      return;
+    }
+
+    const reservedSpots = draftConfig.totalTeams - draftConfig.lotteryTeams;
+    const reservedPicks: DraftedTeam[] = Array.from({ length: reservedSpots }, (_, index) => ({
+      name: draftConfig.reservedNames?.[index] || `Reserved spot ${index + 1}`,
+      icon: '👤',
+      color: '#64748b',
+      pick: index + 1,
+      standing: 0,
+    }));
+    const picks = [...drafted, ...reservedPicks].sort((a, b) => a.pick - b.pick);
+    const signature = JSON.stringify({ draftConfig, picks });
+    if (signature === lastSavedResult.current) return;
+
+    setSavingResult(true);
+    setResultSaveError(null);
+    fetch(`/api/results/${encodeURIComponent(roomCode)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draftName: draftConfig.draftName, picks }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Could not save the draft result.');
+        return response.json();
+      })
+      .then(() => {
+        lastSavedResult.current = signature;
+        setSavedResultUrl(`/results/${roomCode}`);
+      })
+      .catch((error: unknown) => {
+        setResultSaveError(error instanceof Error ? error.message : 'Could not save the draft result.');
+      })
+      .finally(() => setSavingResult(false));
+  }, [isHost, roomCode, draftConfig, drafted, isDrafting]);
 
   // Navigate to draft URL when room is created
   useEffect(() => {
@@ -164,6 +209,12 @@ export default function NFLDraftAnimator() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyResultLink = async () => {
+    if (!savedResultUrl) return;
+    await navigator.clipboard.writeText(`${window.location.origin}${savedResultUrl}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const standingToString = (place: number): string => {
     if (place === 1) return '1st';
     if (place === 2) return '2nd';
@@ -369,17 +420,17 @@ export default function NFLDraftAnimator() {
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           <div className="flex-1">
             <div className="text-center mb-4">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Trophy className="w-10 h-10 text-yellow-400" />
-                <h1 className="text-3xl sm:text-5xl font-bold break-words">{draftName}</h1>
-                <Trophy className="w-10 h-10 text-yellow-400" />
+              <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4">
+                <Trophy className="hidden sm:block w-10 h-10 text-yellow-400" />
+                <h1 className="text-2xl sm:text-5xl font-bold break-words max-w-full">{draftName}</h1>
+                <Trophy className="hidden sm:block w-10 h-10 text-yellow-400" />
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
               <p className="text-blue-300 text-lg">Weighted lottery based on standings!</p>
 
               {/* Room info for host */}
               {isHost && roomCode && (
-                <div className="mt-4 inline-flex items-center gap-4 bg-slate-800/70 rounded-xl px-6 py-3 border border-slate-600">
+                <div className="mt-4 w-full flex flex-col sm:flex-row sm:inline-flex items-stretch sm:items-center gap-3 sm:gap-4 bg-slate-800/70 rounded-xl px-4 sm:px-6 py-3 border border-slate-600">
                   <div className="flex items-center gap-2">
                     <Link className="w-4 h-4 text-blue-400" />
                     <span className="text-slate-400">Room:</span>
@@ -387,7 +438,7 @@ export default function NFLDraftAnimator() {
                   </div>
                   <button
                     onClick={copyShareLink}
-                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                    className="w-full sm:w-auto justify-center flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copied!' : 'Copy Link'}
@@ -466,10 +517,27 @@ export default function NFLDraftAnimator() {
               {!isDrafting && drafted.length === lotteryTeams && (
                 <div className="text-center animate-in fade-in zoom-in duration-500">
                   <div className="text-6xl mb-6">🎉</div>
-                  <h2 className="text-4xl font-bold mb-4">Draft Complete!</h2>
+                  <h2 className="text-3xl sm:text-4xl font-bold mb-4">Draft Complete!</h2>
+                  {savingResult && <p className="text-blue-300 mb-4">Saving your results...</p>}
+                  {resultSaveError && <p className="text-red-300 mb-4">{resultSaveError}</p>}
+                  {savedResultUrl && (
+                    <div className="mb-5 rounded-xl bg-slate-900/60 border border-green-700/60 p-3 max-w-xl mx-auto">
+                      <p className="text-sm text-green-300 mb-2">Persistent results link</p>
+                      <a href={savedResultUrl} className="block text-blue-300 underline truncate mb-3">
+                        {window.location.origin}{savedResultUrl}
+                      </a>
+                      <button
+                        onClick={copyResultLink}
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold"
+                      >
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copied ? 'Copied' : 'Copy Results Link'}
+                      </button>
+                    </div>
+                  )}
                   {!isViewer && (
                     <button
-                      onClick={startDraft}
+                      onClick={() => setShowRedraftWarning(true)}
                       className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all transform hover:scale-105"
                     >
                       Draft Again?
@@ -622,6 +690,34 @@ export default function NFLDraftAnimator() {
           </div>
         </div>
       </div>
+
+      {showRedraftWarning && (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-amber-600/70 p-5 sm:p-6 shadow-2xl">
+            <h2 className="text-xl sm:text-2xl font-bold mb-3">Replace the saved results?</h2>
+            <p className="text-slate-300 mb-6">
+              Starting a redraft will keep this share URL, but completing the redraft will overwrite the previous results at that link.
+            </p>
+            <div className="flex flex-col sm:flex-row-reverse gap-3">
+              <button
+                onClick={() => {
+                  setShowRedraftWarning(false);
+                  startDraft();
+                }}
+                className="bg-amber-600 hover:bg-amber-500 px-4 py-3 rounded-xl font-bold"
+              >
+                Start Redraft
+              </button>
+              <button
+                onClick={() => setShowRedraftWarning(false)}
+                className="bg-slate-700 hover:bg-slate-600 px-4 py-3 rounded-xl font-semibold"
+              >
+                Keep Current Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

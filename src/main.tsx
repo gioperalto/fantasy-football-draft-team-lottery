@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { WebSocketProvider } from './contexts/WebSocketContext'
 import App from './App.tsx'
 import JoinDraft from './components/JoinDraft.tsx'
+import DraftResult from './components/DraftResult.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<App />} />
           <Route path="/join" element={<JoinDraft />} />
           <Route path="/draft/:code" element={<App />} />
+          <Route path="/results/:id" element={<DraftResult />} />
         </Routes>
       </BrowserRouter>
     </WebSocketProvider>

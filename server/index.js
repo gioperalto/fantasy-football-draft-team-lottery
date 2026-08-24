@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,49 @@ import { parse } from 'node:url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PORT = process.env.PORT || 3001;
 const DIST_DIR = join(__dirname, '..', 'dist');
+
+const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..', '.data');
+const RESULTS_FILE = join(DATA_DIR, 'draft-results.json');
+
+async function readResults() {
+  try {
+    return JSON.parse(await readFile(RESULTS_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+async function writeResult(id, result) {
+  await mkdir(DATA_DIR, { recursive: true });
+  const results = await readResults();
+  results[id] = { ...result, id, updatedAt: new Date().toISOString() };
+  await writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));
+  return results[id];
+}
+
+function sendJson(res, status, payload) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+  });
+  res.end(JSON.stringify(payload));
+}
+
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 1_000_000) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -28,6 +71,44 @@ const MIME_TYPES = {
 const server = createServer(async (req, res) => {
   try {
     const urlPath = parse(req.url).pathname;
+
+    if (urlPath.startsWith('/api/results/')) {
+      const resultId = urlPath.split('/').pop();
+      if (!resultId || !/^[A-Za-z0-9_-]{1,64}$/.test(resultId)) {
+        sendJson(res, 400, { error: 'Invalid result ID' });
+        return;
+      }
+
+      if (req.method === 'GET') {
+        const results = await readResults();
+        if (!results[resultId]) {
+          sendJson(res, 404, { error: 'Draft result not found' });
+          return;
+        }
+        sendJson(res, 200, results[resultId]);
+        return;
+      }
+
+      if (req.method === 'PUT') {
+        try {
+          const result = JSON.parse(await readRequestBody(req));
+          if (!result.draftName || !Array.isArray(result.picks)) {
+            sendJson(res, 400, { error: 'Draft name and picks are required' });
+            return;
+          }
+          const saved = await writeResult(resultId, result);
+          sendJson(res, 200, saved);
+        } catch (error) {
+          console.error('Error saving draft result:', error);
+          sendJson(res, 400, { error: 'Invalid draft result' });
+        }
+        return;
+      }
+
+      sendJson(res, 405, { error: 'Method not allowed' });
+      return;
+    }
+
     let filePath = join(DIST_DIR, urlPath === '/' ? 'index.html' : urlPath);
 
     if (!existsSync(filePath) || !extname(filePath)) {

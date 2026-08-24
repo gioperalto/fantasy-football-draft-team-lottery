@@ -282,7 +282,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
           <button
             onClick={() => setShowPreview(true)}
             disabled={!isValid}
-            className="group bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white px-8 py-6 rounded-xl text-xl font-bold transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-xl flex items-center gap-3"
+            className="group w-full sm:w-auto justify-center bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white px-6 sm:px-8 py-4 sm:py-6 rounded-xl text-lg sm:text-xl font-bold transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-xl flex items-center gap-3"
           >
             <Eye className="w-6 h-6" />
             Preview Draft
@@ -290,7 +290,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
           <button
             onClick={handleStartDraft}
             disabled={!isValid}
-            className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white px-12 py-6 rounded-xl text-2xl font-bold transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-2xl flex items-center gap-4"
+            className="group w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white px-6 sm:px-12 py-4 sm:py-6 rounded-xl text-xl sm:text-2xl font-bold transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-2xl flex items-center gap-4"
           >
             Proceed to Draft
             <ArrowRight className="w-8 h-8 group-hover:translate-x-1 transition-transform" />
@@ -335,7 +335,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
                   <h3 className="text-xl font-bold mb-4 text-center">Draft Board Preview</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {Array.from({ length: totalTeams }).map((_, idx) => {
                       const pickNum = idx + 1;
                       const isReserved = pickNum <= reservedSpots;
@@ -396,7 +396,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-center gap-4">
+              <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                 <button
                   onClick={() => setShowPreview(false)}
                   className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-xl font-bold transition-colors"

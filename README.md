@@ -15,6 +15,8 @@ A sleek, animated draft lottery application for fantasy football leagues. Turn y
 - **Preview Mode**: Preview your draft setup before committing to the lottery
 - **Dramatic Finale**: The final two picks are revealed simultaneously for maximum suspense
 - **Live Viewing**: Share a unique 6-character room code so league members can watch the draft in real-time
+- **Persistent Results**: Completed drafts receive a shareable results URL backed by a Railway Volume; completing a redraft replaces the result at that same URL
+- **Mobile-first Results**: Finished drafts use a grid on larger screens and a compact pick-by-pick list on phones
 
 ## How It Works
 
@@ -80,6 +82,9 @@ For production deployment, you'll need to:
 1. Deploy the WebSocket server (e.g., on a Node.js hosting platform)
 2. Set the `VITE_WS_URL` environment variable to point to your WebSocket server
 3. Deploy the built frontend to your hosting platform
+4. Attach a Railway Volume to the service at `/data` and set `DATA_DIR=/data` so saved results survive redeploys and restarts
+
+Completed results are available at `/results/<room-code>`. A completed redraft intentionally overwrites the saved result for that room code after showing a warning.
 
 ## Usage
 
@@ -127,6 +132,7 @@ For production deployment, you'll need to:
 |----------|-------------|---------|
 | `VITE_WS_URL` | WebSocket server URL | `ws://localhost:3001` |
 | `WS_PORT` | WebSocket server port (server-side) | `3001` |
+| `DATA_DIR` | Directory for persistent JSON results (set to `/data` on Railway) | `.data` |
 
 ## Tech Stack
 
