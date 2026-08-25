@@ -75,8 +75,10 @@ export default function NFLDraftAnimator() {
   const [resultSaveError, setResultSaveError] = useState<string | null>(null);
   const [showRedraftWarning, setShowRedraftWarning] = useState(false);
   const [victoryTrigger, setVictoryTrigger] = useState(0);
+  const [unluckyTrigger, setUnluckyTrigger] = useState(0);
   const lastSavedResult = useRef<string | null>(null);
   const lastLuckyReceipt = useRef<string | null>(null);
+  const lastUnluckyReceipt = useRef<string | null>(null);
 
   // Determine if we're in viewer mode (joined via URL with code)
   const isViewer = !!code && !isHost;
@@ -198,6 +200,7 @@ export default function NFLDraftAnimator() {
     setCarouselIndex(0);
     setHasJoinedRoom(false);
     lastLuckyReceipt.current = null;
+    lastUnluckyReceipt.current = null;
 
     // Create WebSocket room
     const initialState: DraftState = {
@@ -407,6 +410,9 @@ export default function NFLDraftAnimator() {
     if (yourPick < expectedPick && lastLuckyReceipt.current !== receiptKey) {
       lastLuckyReceipt.current = receiptKey;
       setVictoryTrigger((trigger) => trigger + 1);
+    } else if (yourPick > expectedPick && lastUnluckyReceipt.current !== receiptKey) {
+      lastUnluckyReceipt.current = receiptKey;
+      setUnluckyTrigger((trigger) => trigger + 1);
     }
   }, [draftConfig, drafted, identityTeam, isDrafting]);
 
@@ -537,7 +543,7 @@ export default function NFLDraftAnimator() {
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
               <p className="text-blue-300 text-lg">Weighted lottery based on standings!</p>
-              <DraftMusic victoryTrigger={victoryTrigger} />
+              <DraftMusic victoryTrigger={victoryTrigger} unluckyTrigger={unluckyTrigger} />
 
               {/* Room info for host */}
               {isHost && roomCode && (

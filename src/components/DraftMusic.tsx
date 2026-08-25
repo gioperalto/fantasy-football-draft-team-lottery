@@ -3,6 +3,7 @@ import { ChevronDown, Music2, Volume2, VolumeX } from 'lucide-react';
 
 interface DraftMusicProps {
   victoryTrigger?: number;
+  unluckyTrigger?: number;
 }
 
 interface DraftTrack {
@@ -50,9 +51,10 @@ function readStoredVolume(): number {
   return Number.isFinite(stored) && stored >= 0 && stored <= 1 ? stored : 0.35;
 }
 
-export default function DraftMusic({ victoryTrigger = 0 }: DraftMusicProps) {
+export default function DraftMusic({ victoryTrigger = 0, unluckyTrigger = 0 }: DraftMusicProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const victoryAudioRef = useRef<HTMLAudioElement>(null);
+  const unluckyAudioRef = useRef<HTMLAudioElement>(null);
   const [enabled, setEnabled] = useState(() => window.localStorage.getItem(ENABLED_STORAGE_KEY) === 'true');
   const [trackId, setTrackId] = useState(() => {
     const stored = window.localStorage.getItem(TRACK_STORAGE_KEY);
@@ -102,6 +104,18 @@ export default function DraftMusic({ victoryTrigger = 0 }: DraftMusicProps) {
     });
   }, [victoryTrigger, enabled, volume]);
 
+  useEffect(() => {
+    if (unluckyTrigger === 0 || !enabled) return;
+    const unluckyAudio = unluckyAudioRef.current;
+    if (!unluckyAudio) return;
+
+    unluckyAudio.currentTime = 0;
+    unluckyAudio.volume = volume;
+    void unluckyAudio.play().catch(() => {
+      // Playback can be blocked if the user has not interacted with the page.
+    });
+  }, [unluckyTrigger, enabled, volume]);
+
   const toggleMusic = () => setEnabled((current) => !current);
 
   const handleTrackChange = (nextTrackId: string) => {
@@ -118,6 +132,7 @@ export default function DraftMusic({ victoryTrigger = 0 }: DraftMusicProps) {
     <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-3 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
       <audio ref={audioRef} src={selectedTrack.src} loop preload="metadata" />
       <audio ref={victoryAudioRef} src="/audio/draft/victory.mp3" preload="auto" />
+      <audio ref={unluckyAudioRef} src="/audio/draft/unlucky.mp3" preload="auto" />
       <div className="flex items-center gap-2 text-slate-300">
         <Music2 className="h-4 w-4 text-amber-300" />
         <span className="font-semibold">Draft Music</span>
