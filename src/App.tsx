@@ -76,7 +76,9 @@ export default function NFLDraftAnimator() {
   const [showRedraftWarning, setShowRedraftWarning] = useState(false);
   const [victoryTrigger, setVictoryTrigger] = useState(0);
   const [unluckyTrigger, setUnluckyTrigger] = useState(0);
+  const [pickTrigger, setPickTrigger] = useState(0);
   const lastSavedResult = useRef<string | null>(null);
+  const previousDraftedCount = useRef<number | null>(null);
   const lastLuckyReceipt = useRef<string | null>(null);
   const lastUnluckyReceipt = useRef<string | null>(null);
 
@@ -199,6 +201,7 @@ export default function NFLDraftAnimator() {
     setTotalDrawings(0);
     setCarouselIndex(0);
     setHasJoinedRoom(false);
+    previousDraftedCount.current = null;
     lastLuckyReceipt.current = null;
     lastUnluckyReceipt.current = null;
 
@@ -398,6 +401,14 @@ export default function NFLDraftAnimator() {
   }, [preDraftCountdown]);
 
   useEffect(() => {
+    const previousCount = previousDraftedCount.current;
+    previousDraftedCount.current = drafted.length;
+    if (previousCount === null || drafted.length <= previousCount) return;
+
+    setPickTrigger((trigger) => trigger + (drafted.length - previousCount));
+  }, [drafted.length]);
+
+  useEffect(() => {
     if (!draftConfig || isDrafting || drafted.length !== draftConfig.lotteryTeams || !identityTeam) return;
 
     const reservedSpots = draftConfig.totalTeams - draftConfig.lotteryTeams;
@@ -543,7 +554,7 @@ export default function NFLDraftAnimator() {
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
               <p className="text-blue-300 text-lg">Weighted lottery based on standings!</p>
-              <DraftMusic victoryTrigger={victoryTrigger} unluckyTrigger={unluckyTrigger} />
+              <DraftMusic pickTrigger={pickTrigger} victoryTrigger={victoryTrigger} unluckyTrigger={unluckyTrigger} />
 
               {/* Room info for host */}
               {isHost && roomCode && (

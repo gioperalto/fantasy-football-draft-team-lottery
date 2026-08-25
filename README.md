@@ -13,7 +13,7 @@ A sleek, animated draft lottery application for fantasy football leagues. Turn y
 - **Manager Identity**: Join by claiming a configured manager or reserved seat and receive a personal draft position receipt
 - **Team Customization**: Personalize each team with custom names, manager names, uploaded images, icons (30 emoji options), and colors (15 color options)
 - **Draft Receipts**: See whether the lottery treated you as lucky, unlucky, or right on expectation
-- **Personal Draft Music**: Every participant can independently toggle looping Stadium Hype, Draft Tension, or Lo-fi Draft music, with saved local volume preference; playback is off by default. Lucky participants hear the one-shot Victory cue, while unlucky participants hear the one-shot Unlucky cue when enabled
+- **Personal Draft Music**: Every participant can independently toggle looping Stadium Hype, Draft Tension, or Lo-fi Draft music, with saved local volume preference; playback is off by default. Each selected pick plays a short original draft-announcement fanfare when enabled. Lucky participants hear the one-shot Victory cue, while unlucky participants hear the one-shot Unlucky cue when enabled
 - **Preview Mode**: Preview your draft setup before committing to the lottery
 - **Dramatic Finale**: The final two picks are revealed simultaneously for maximum suspense
 - **Live Viewing**: Share a unique 6-character room code so league members can watch the draft in real-time

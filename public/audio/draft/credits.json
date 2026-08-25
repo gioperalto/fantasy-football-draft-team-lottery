@@ -42,6 +42,14 @@
       "artist": "Eugenio Mininni",
       "sourceUrl": "https://mixkit.co/free-stock-music/mood/sad/",
       "downloadUrl": "https://assets.mixkit.co/music/614/614.mp3"
+    },
+    {
+      "id": "pick-announcement",
+      "displayName": "Pick Announcement",
+      "sourceTitle": "Original synthesized draft-pick fanfare",
+      "artist": "Fantasy Football Draft Picker",
+      "sourceUrl": "",
+      "downloadUrl": ""
     }
   ]
 }
