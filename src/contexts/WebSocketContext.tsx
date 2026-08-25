@@ -2,24 +2,26 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, ty
 
 interface DraftState {
   draftConfig: {
-    teams: Array<{ name: string; icon: string; color: string; standing: number }>;
+    teams: Array<{ name: string; icon: string; color: string; standing: number; manager?: string; image?: string }>;
     totalTeams: number;
     lotteryTeams: number;
     draftName: string;
     pickCountdown: number;
+    startDelayMinutes: number;
     reservedNames: string[];
   } | null;
-  drafted: Array<{ name: string; icon: string; color: string; standing: number; pick: number }>;
-  current: { name: string; icon: string; color: string; standing: number } | null;
+  drafted: Array<{ name: string; icon: string; color: string; standing: number; manager?: string; image?: string; pick: number }>;
+  current: { name: string; icon: string; color: string; standing: number; manager?: string; image?: string } | null;
   isDrafting: boolean;
   showCurrent: boolean;
   countdown: number | null;
   lotteryOdds: Array<{
-    team: { name: string; icon: string; color: string; standing: number };
+    team: { name: string; icon: string; color: string; standing: number; manager?: string; image?: string };
     odds: number;
     drawings: number;
   }>;
   totalDrawings: number;
+  preDraftCountdown?: number | null;
 }
 
 interface WebSocketContextType {
@@ -33,6 +35,7 @@ interface WebSocketContextType {
   joinRoom: (code: string) => void;
   broadcastState: (state: DraftState) => void;
   broadcastEvent: (event: string, data: unknown) => void;
+  sendIdentity: (identity: { name: string; teamName?: string }) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -180,6 +183,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [isHost]);
 
+  const sendIdentity = useCallback((identity: { name: string; teamName?: string }) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isHost) {
+      wsRef.current.send(JSON.stringify({ type: 'JOIN_IDENTITY', identity }));
+    }
+  }, [isHost]);
+
   useEffect(() => {
     return () => {
       wsRef.current?.close();
@@ -198,7 +207,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         createRoom,
         joinRoom,
         broadcastState,
-        broadcastEvent
+        broadcastEvent,
+        sendIdentity
       }}
     >
       {children}

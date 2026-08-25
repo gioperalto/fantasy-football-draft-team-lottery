@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Plus, Minus, ArrowRight, Eye, X } from 'lucide-react';
+import { Trophy, Plus, Minus, ArrowRight, Eye, X, Upload } from 'lucide-react';
 import type { Team } from '../interfaces/Team';
 
 const EMOJI_OPTIONS = [
@@ -21,6 +21,7 @@ interface DraftSetupProps {
     lotteryTeams: number,
     draftName: string,
     pickCountdown: number,
+    startDelayMinutes: number,
     reservedNames: string[],
   ) => void;
 }
@@ -30,6 +31,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
   const [totalTeams, setTotalTeams] = useState(12);
   const [lotteryTeams, setLotteryTeams] = useState(10);
   const [pickCountdown, setPickCountdown] = useState(15);
+  const [startDelayMinutes, setStartDelayMinutes] = useState(0);
   const [teams, setTeams] = useState<Team[]>([]);
   const [reservedNames, setReservedNames] = useState<string[]>(['', '']);
   const [showPreview, setShowPreview] = useState(false);
@@ -64,6 +66,13 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
     setTeams(updated);
   };
 
+  const handleTeamImage = (index: number, file: File | undefined) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => updateTeam(index, 'image', String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
   const updateReservedName = (index: number, value: string) => {
     setReservedNames((currentNames) =>
       currentNames.map((name, nameIndex) => nameIndex === index ? value : name)
@@ -77,7 +86,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
 
   const handleStartDraft = () => {
     if (isValid) {
-      onStartDraft(teams, totalTeams, lotteryTeams, draftName, pickCountdown, reservedNames);
+      onStartDraft(teams, totalTeams, lotteryTeams, draftName, pickCountdown, startDelayMinutes, reservedNames);
     }
   };
 
@@ -118,7 +127,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Total Teams in Draft
@@ -163,12 +172,36 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
+                Draft Starts In (minutes)
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setStartDelayMinutes(Math.max(0, startDelayMinutes - 1))}
+                  className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                  aria-label="Decrease start delay"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <span className="text-3xl font-bold w-16 text-center">{startDelayMinutes}</span>
+                <button
+                  onClick={() => setStartDelayMinutes(startDelayMinutes + 1)}
+                  className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                  aria-label="Increase start delay"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Pick Countdown (seconds)
               </label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setPickCountdown(Math.max(5, pickCountdown - 5))}
                   className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                  aria-label="Decrease pick countdown"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
@@ -176,6 +209,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                 <button
                   onClick={() => setPickCountdown(Math.min(60, pickCountdown + 5))}
                   className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                  aria-label="Increase pick countdown"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -222,13 +256,24 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                 style={{ borderLeftColor: team.color, borderLeftWidth: '4px' }}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                  <div className="col-span-1 sm:col-span-4">
+                  <div className="col-span-1 sm:col-span-3">
                     <label className="block text-xs text-slate-400 mb-1">Team Name</label>
                     <input
                       type="text"
                       value={team.name}
                       onChange={(e) => updateTeam(index, 'name', e.target.value)}
                       placeholder="Enter team name..."
+                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="col-span-1 sm:col-span-3">
+                    <label className="block text-xs text-slate-400 mb-1">Manager</label>
+                    <input
+                      type="text"
+                      value={team.manager || ''}
+                      onChange={(e) => updateTeam(index, 'manager', e.target.value)}
+                      placeholder="Manager name"
                       className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
                   </div>
@@ -244,7 +289,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                     />
                   </div>
 
-                  <div className="col-span-1 sm:col-span-3">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="block text-xs text-slate-400 mb-1">Icon</label>
                     <div className="flex flex-wrap gap-1">
                       {EMOJI_OPTIONS.map((emoji) => (
@@ -259,7 +304,7 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                     </div>
                   </div>
 
-                  <div className="col-span-1 sm:col-span-3">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="block text-xs text-slate-400 mb-1">Color</label>
                     <div className="flex flex-wrap gap-1">
                       {COLOR_OPTIONS.map((color) => (
@@ -271,6 +316,21 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
                         />
                       ))}
                     </div>
+                  </div>
+
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="block text-xs text-slate-400 mb-1">Team Image</label>
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-500 px-2 py-2 text-sm text-slate-300 hover:border-blue-400 hover:text-white">
+                      <Upload className="w-4 h-4" />
+                      {team.image ? 'Replace' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => handleTeamImage(index, e.target.files?.[0])}
+                      />
+                    </label>
+                    {team.image && <img src={team.image} alt={`${team.name} logo`} className="mt-2 h-10 w-10 rounded-full object-cover" />}
                   </div>
                 </div>
               </div>

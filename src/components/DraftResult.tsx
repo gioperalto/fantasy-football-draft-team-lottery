@@ -8,6 +8,7 @@ interface ResultPick {
   color: string;
   standing: number;
   pick: number;
+  image?: string;
 }
 
 interface DraftResultData {
@@ -80,7 +81,7 @@ export default function DraftResult() {
             style={{ borderLeft: pick.standing !== 0 ? `4px solid ${pick.color}` : undefined }}
           >
             <span className="w-9 text-center font-bold text-slate-300">{pick.pick}</span>
-            <span className="text-2xl">{pick.icon}</span>
+            <span className="text-2xl">{pick.image ? <img src={pick.image} alt="" className="h-8 w-8 rounded-full object-cover" /> : pick.icon}</span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold break-words">{pick.name}</span>
               <span className="block text-xs text-slate-400">Draft position {pick.pick}</span>
@@ -102,7 +103,7 @@ function PickCard({ pick }: { pick: ResultPick }) {
       className="bg-slate-700/50 rounded-xl p-4 flex flex-col items-center gap-2 min-w-0"
       style={{ borderLeft: pick.standing !== 0 ? `4px solid ${pick.color}` : undefined }}
     >
-      <div className="text-4xl">{pick.icon}</div>
+      <div className="text-4xl">{pick.image ? <img src={pick.image} alt="" className="h-12 w-12 rounded-full object-cover" /> : pick.icon}</div>
       <div className="text-center min-w-0 w-full">
         <div className="font-semibold text-sm truncate" title={pick.name}>{pick.name}</div>
         <div className="text-xs text-slate-400">Pick #{pick.pick}</div>

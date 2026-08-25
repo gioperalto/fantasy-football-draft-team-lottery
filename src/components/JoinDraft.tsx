@@ -4,6 +4,7 @@ import { Trophy, Users, ArrowRight } from 'lucide-react';
 
 export default function JoinDraft() {
   const [code, setCode] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -16,7 +17,12 @@ export default function JoinDraft() {
       return;
     }
 
-    navigate(`/draft/${cleanCode}`);
+    if (!displayName.trim()) {
+      setError('Please enter your name');
+      return;
+    }
+
+    navigate(`/draft/${cleanCode}?name=${encodeURIComponent(displayName.trim())}`);
   };
 
   return (
@@ -39,6 +45,17 @@ export default function JoinDraft() {
 
           <form onSubmit={handleSubmit}>
             <label className="block text-sm font-medium text-slate-300 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => { setDisplayName(e.target.value); setError(''); }}
+              placeholder="How should the league know you?"
+              className="w-full mb-4 bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              maxLength={40}
+            />
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Draft Code
             </label>
             <input
@@ -60,7 +77,7 @@ export default function JoinDraft() {
 
             <button
               type="submit"
-              disabled={code.length < 6}
+              disabled={code.length < 6 || !displayName.trim()}
               className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center justify-center gap-3"
             >
               Join Draft

@@ -9,9 +9,10 @@ A sleek, animated draft lottery application for fantasy football leagues. Turn y
 - **Customizable Draft Setup**: Configure your draft name, total teams, and number of lottery participants
 - **Weighted Lottery System**: Teams with worse standings get more lottery drawings, giving them better odds at earlier picks
 - **Reserved Picks**: Support for leagues where top finishers keep their draft positions (e.g., first 2 picks reserved for playoff teams)
-- **Configurable Countdown**: Adjust the suspense with customizable countdown timers (5-60 seconds per pick)
-- **Live Odds Display**: Watch the lottery odds update in real-time as teams are selected
-- **Team Customization**: Personalize each team with custom names, icons (30 emoji options), and colors (15 color options)
+- **Configurable Countdown**: Set a zero-default pre-draft countdown in one-minute increments, plus the existing per-pick reveal timer
+- **Manager Identity**: Join with a display name, claim a manager seat, and receive a personal draft position receipt
+- **Team Customization**: Personalize each team with custom names, manager names, uploaded images, icons (30 emoji options), and colors (15 color options)
+- **Draft Receipts**: See whether the lottery treated you as lucky, unlucky, or right on expectation
 - **Preview Mode**: Preview your draft setup before committing to the lottery
 - **Dramatic Finale**: The final two picks are revealed simultaneously for maximum suspense
 - **Live Viewing**: Share a unique 6-character room code so league members can watch the draft in real-time

@@ -22,6 +22,7 @@ interface DraftConfig {
   lotteryTeams: number;
   draftName: string;
   pickCountdown: number;
+  startDelayMinutes: number;
   reservedNames: string[];
 }
 
@@ -34,6 +35,7 @@ interface DraftState {
   countdown: number | null;
   lotteryOdds: LotteryOdds[];
   totalDrawings: number;
+  preDraftCountdown: number | null;
 }
 
 export default function NFLDraftAnimator() {
@@ -47,7 +49,8 @@ export default function NFLDraftAnimator() {
     error: wsError,
     createRoom,
     joinRoom,
-    broadcastState
+    broadcastState,
+    sendIdentity
   } = useWebSocket();
 
   const [page, setPage] = useState<'setup' | 'draft'>('setup');
@@ -59,6 +62,10 @@ export default function NFLDraftAnimator() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [lotteryOdds, setLotteryOdds] = useState<LotteryOdds[]>([]);
   const [totalDrawings, setTotalDrawings] = useState(0);
+  const [preDraftCountdown, setPreDraftCountdown] = useState<number | null>(null);
+  const [identityName, setIdentityName] = useState('');
+  const [identityTeam, setIdentityTeam] = useState('');
+  const [hasJoinedRoom, setHasJoinedRoom] = useState(!code);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [savedResultUrl, setSavedResultUrl] = useState<string | null>(null);
@@ -77,6 +84,12 @@ export default function NFLDraftAnimator() {
     }
   }, [code, roomCode, joinRoom]);
 
+  useEffect(() => {
+    if (!code) return;
+    const nameFromUrl = new URLSearchParams(window.location.search).get('name');
+    if (nameFromUrl) setIdentityName(nameFromUrl.slice(0, 40));
+  }, [code]);
+
   // Sync remote state for viewers
   useEffect(() => {
     if (isViewer && remoteState) {
@@ -88,6 +101,7 @@ export default function NFLDraftAnimator() {
       setCountdown(remoteState.countdown);
       setLotteryOdds(remoteState.lotteryOdds);
       setTotalDrawings(remoteState.totalDrawings);
+      setPreDraftCountdown(remoteState.preDraftCountdown ?? null);
       if (remoteState.draftConfig) {
         setPage('draft');
       }
@@ -105,11 +119,12 @@ export default function NFLDraftAnimator() {
         showCurrent,
         countdown,
         lotteryOdds,
-        totalDrawings
+        totalDrawings,
+        preDraftCountdown
       };
       broadcastState(state);
     }
-  }, [isHost, roomCode, page, draftConfig, drafted, current, isDrafting, showCurrent, countdown, lotteryOdds, totalDrawings, broadcastState]);
+  }, [isHost, roomCode, page, draftConfig, drafted, current, isDrafting, showCurrent, countdown, lotteryOdds, totalDrawings, preDraftCountdown, broadcastState]);
 
   // Persist the completed result to the Railway-backed API. The room code is the
   // stable result ID, so a later completed redraft intentionally overwrites it.
@@ -164,9 +179,10 @@ export default function NFLDraftAnimator() {
     lotteryTeams: number,
     draftName: string,
     pickCountdown: number,
+    startDelayMinutes: number,
     reservedNames: string[],
   ) => {
-    const config = { teams, totalTeams, lotteryTeams, draftName, pickCountdown, reservedNames };
+    const config = { teams, totalTeams, lotteryTeams, draftName, pickCountdown, startDelayMinutes, reservedNames };
     setDraftConfig(config);
     setPage('draft');
     setDrafted([]);
@@ -174,6 +190,7 @@ export default function NFLDraftAnimator() {
     setIsDrafting(false);
     setShowCurrent(false);
     setCountdown(null);
+    setPreDraftCountdown(null);
     setLotteryOdds([]);
     setTotalDrawings(0);
     setCarouselIndex(0);
@@ -187,7 +204,8 @@ export default function NFLDraftAnimator() {
       showCurrent: false,
       countdown: null,
       lotteryOdds: [],
-      totalDrawings: 0
+      totalDrawings: 0,
+      preDraftCountdown: null
     };
     createRoom(initialState);
   };
@@ -199,6 +217,7 @@ export default function NFLDraftAnimator() {
     setIsDrafting(false);
     setShowCurrent(false);
     setCountdown(null);
+    setPreDraftCountdown(null);
     setLotteryOdds([]);
   };
 
@@ -263,6 +282,7 @@ export default function NFLDraftAnimator() {
     setIsDrafting(true);
     setShowCurrent(false);
     setCountdown(null);
+    setPreDraftCountdown(null);
     setCarouselIndex(0);
 
     let remainingTeams = [...teams];
@@ -348,6 +368,28 @@ export default function NFLDraftAnimator() {
     }, delay + 2000);
   };
 
+  const beginDraft = () => {
+    if (!draftConfig || isViewer || isDrafting) return;
+    if ((draftConfig.startDelayMinutes ?? 0) === 0) {
+      startDraft();
+      return;
+    }
+    setPreDraftCountdown((draftConfig.startDelayMinutes ?? 0) * 60);
+  };
+
+  useEffect(() => {
+    if (preDraftCountdown === null) return;
+    if (preDraftCountdown <= 0) {
+      setPreDraftCountdown(null);
+      startDraft();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setPreDraftCountdown((value) => value === null ? null : Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [preDraftCountdown]);
+
   // Show error if WebSocket connection failed for viewers
   if (isViewer && wsError) {
     return (
@@ -413,6 +455,46 @@ export default function NFLDraftAnimator() {
   );
   const completedBoardItems = [...allDraftedWithReserved].sort((a, b) => a.pick - b.pick);
   const isDraftComplete = !isDrafting && drafted.length === lotteryTeams;
+  const yourTeam = draftConfig.teams.find((team) => team.name === identityTeam);
+  const yourPick = drafted.find((team) => team.name === identityTeam)?.pick;
+  const expectedPick = yourTeam ? reservedSpots + Math.max(1, Math.round((yourTeam.standing / (lotteryTeams + 1)) * lotteryTeams)) : null;
+  const receiptLabel = yourPick && expectedPick
+    ? yourPick < expectedPick ? 'LUCKY' : yourPick > expectedPick ? 'UNLUCKY' : 'ON EXPECTATION'
+    : null;
+  const receiptCopy = receiptLabel === 'LUCKY'
+    ? 'The lottery gods just winked at you. Frame this receipt.'
+    : receiptLabel === 'UNLUCKY'
+      ? 'That pick hurt. Rage responsibly, then start plotting the comeback.'
+      : 'No miracles, no disasters. You drafted almost exactly on schedule.';
+
+  if (isViewer && !hasJoinedRoom) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4 flex items-center justify-center">
+        <form
+          className="w-full max-w-lg bg-slate-800/70 rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-2xl"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const name = identityName.trim();
+            if (!name || !identityTeam) return;
+            sendIdentity({ name, teamName: identityTeam });
+            setHasJoinedRoom(true);
+          }}
+        >
+          <div className="text-5xl mb-4 text-center">🏈</div>
+          <h2 className="text-3xl font-bold text-center mb-2">Claim your seat</h2>
+          <p className="text-slate-300 text-center mb-6">Pick a name and manager identity. When the lottery lands, we’ll tell you exactly where you stand.</p>
+          <label className="block text-sm text-slate-300 mb-2">Your name</label>
+          <input value={identityName} onChange={(event) => setIdentityName(event.target.value)} maxLength={40} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-4 text-white" placeholder="e.g. Giovanni" autoFocus />
+          <label className="block text-sm text-slate-300 mb-2">Join as manager</label>
+          <select value={identityTeam} onChange={(event) => setIdentityTeam(event.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-6 text-white">
+            <option value="">Choose a manager</option>
+            {draftConfig.teams.map((team) => <option key={team.name} value={team.name}>{team.manager || team.name} · {team.name}</option>)}
+          </select>
+          <button type="submit" disabled={!identityName.trim() || !identityTeam} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl px-5 py-4 font-bold text-lg">Join the draft</button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4">
@@ -452,9 +534,10 @@ export default function NFLDraftAnimator() {
 
               {/* Viewer badge */}
               {isViewer && (
-                <div className="mt-4 inline-flex items-center gap-2 bg-purple-900/50 rounded-xl px-4 py-2 border border-purple-600">
+                <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 bg-purple-900/50 rounded-xl px-4 py-2 border border-purple-600">
                   <Users className="w-4 h-4 text-purple-400" />
-                  <span className="text-purple-300">Watching Live</span>
+                  <span className="text-purple-300">{identityName} · {yourTeam?.manager || yourTeam?.name || 'Joined live'}</span>
+                  <span className="text-purple-200 text-sm">{viewerCount} watching</span>
                 </div>
               )}
 
@@ -469,9 +552,9 @@ export default function NFLDraftAnimator() {
               )}
             </div>
             <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-4 min-h-[200px] flex flex-col items-center justify-center border border-slate-700">
-              {!isDrafting && drafted.length === 0 && !isViewer && (
+              {!isDrafting && preDraftCountdown === null && drafted.length === 0 && !isViewer && (
                 <button
-                  onClick={startDraft}
+                  onClick={beginDraft}
                   className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-12 py-6 rounded-xl text-2xl font-bold transition-all transform hover:scale-105 shadow-2xl flex items-center gap-4"
                 >
                   <Play className="w-8 h-8 group-hover:translate-x-1 transition-transform" />
@@ -487,7 +570,17 @@ export default function NFLDraftAnimator() {
                 </div>
               )}
 
-              {countdown !== null && (
+              {preDraftCountdown !== null && (
+                <div className="text-center">
+                  <div className="text-6xl mb-4">⏱️</div>
+                  <div className="text-5xl font-bold text-amber-300">
+                    {Math.floor(preDraftCountdown / 60).toString().padStart(2, '0')}:{(preDraftCountdown % 60).toString().padStart(2, '0')}
+                  </div>
+                  <p className="text-xl text-slate-300 mt-4">The chaos begins soon. Get your bragging rights ready.</p>
+                </div>
+              )}
+
+              {countdown !== null && preDraftCountdown === null && (
                 <div className="text-center">
                   <div className="relative">
                     <div className="inset-0 flex items-center justify-center">
@@ -500,7 +593,7 @@ export default function NFLDraftAnimator() {
 
               {current && showCurrent && (
                 <div className="text-center animate-in fade-in zoom-in duration-500">
-                  <div className="text-9xl mb-6 animate-bounce">{current.icon}</div>
+                  <div className="text-9xl mb-6 animate-bounce">{current.image ? <img src={current.image} alt="" className="h-24 w-24 object-cover rounded-full mx-auto" /> : current.icon}</div>
                   <h2 className="text-4xl font-bold mb-2">{current.name}</h2>
                   <p className="text-xl text-blue-300">Selected!</p>
                 </div>
@@ -566,7 +659,7 @@ export default function NFLDraftAnimator() {
                         }}
                       >
                         <div className={`text-4xl ${team.standing === 0 ? 'opacity-30' : ''}`}>
-                          {team.icon}
+                          {team.image ? <img src={team.image} alt="" className="h-full w-full object-cover rounded-full" /> : team.icon}
                         </div>
                         <div className="text-center">
                           <div className={`font-semibold text-xs ${team.standing === 0 ? 'text-slate-400' : ''}`}>
@@ -616,6 +709,15 @@ export default function NFLDraftAnimator() {
               </div>
             )}
 
+            {isDraftComplete && receiptLabel && (
+              <div className="mt-4 rounded-2xl border border-amber-500/60 bg-gradient-to-r from-amber-950/70 to-slate-800/70 p-5 text-center">
+                <p className="text-sm uppercase tracking-[0.25em] text-amber-300">Your draft receipt</p>
+                <h3 className="mt-2 text-3xl font-black text-white">You are #{yourPick}</h3>
+                <p className="mt-2 text-xl font-bold text-amber-200">{receiptLabel}</p>
+                <p className="mt-2 text-slate-300">{receiptCopy}</p>
+              </div>
+            )}
+
             {isDraftComplete && (
               <div className="mt-4 bg-slate-800/50 backdrop-blur rounded-2xl p-4 sm:p-6 border border-slate-700">
                 <div className="flex items-center justify-between gap-3 mb-4">
@@ -630,7 +732,7 @@ export default function NFLDraftAnimator() {
                       className={`${team.standing === 0 ? 'bg-slate-700/30 border-2 border-dashed border-slate-600' : 'bg-slate-700/50'} rounded-lg p-4 flex flex-col items-center gap-2`}
                       style={{ borderLeft: team.standing !== 0 ? `4px solid ${team.color}` : undefined }}
                     >
-                      <div className={`text-4xl ${team.standing === 0 ? 'opacity-30' : ''}`}>{team.icon}</div>
+                      <div className={`text-4xl ${team.standing === 0 ? 'opacity-30' : ''}`}>{team.image ? <img src={team.image} alt="" className="h-full w-full object-cover rounded-full" /> : team.icon}</div>
                       <div className="text-center min-w-0 w-full">
                         <div className={`font-semibold text-sm truncate ${team.standing === 0 ? 'text-slate-400' : ''}`} title={team.name}>
                           {team.name}
@@ -649,7 +751,7 @@ export default function NFLDraftAnimator() {
                       style={{ borderLeft: team.standing !== 0 ? `4px solid ${team.color}` : undefined }}
                     >
                       <div className="w-10 text-center text-lg font-bold text-slate-400">{team.pick}</div>
-                      <div className={`text-2xl ${team.standing === 0 ? 'opacity-40' : ''}`}>{team.icon}</div>
+                      <div className={`text-2xl ${team.standing === 0 ? 'opacity-40' : ''}`}>{team.image ? <img src={team.image} alt="" className="h-full w-full object-cover rounded-full" /> : team.icon}</div>
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold truncate">{team.name}</div>
                         <div className="text-xs text-slate-400">Draft position {team.pick}</div>
@@ -676,7 +778,7 @@ export default function NFLDraftAnimator() {
                     className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-2"
                     style={{ borderLeft: `4px solid ${item.team.color}` }}
                   >
-                    <div className="text-3xl">{item.team.icon}</div>
+                    <div className="text-3xl">{item.team.image ? <img src={item.team.image} alt="" className="h-10 w-10 object-cover rounded-full" /> : item.team.icon}</div>
                     <div className="flex-1">
                       <div className="font-semibold text-sm">{item.team.name} ({standingToString(item.team.standing)})</div>
                       <div className="text-xs text-blue-300 font-semibold mt-1">
