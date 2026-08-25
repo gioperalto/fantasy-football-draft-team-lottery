@@ -477,6 +477,9 @@ export default function NFLDraftAnimator() {
   const isDraftComplete = !isDrafting && drafted.length === lotteryTeams;
   const yourTeam = draftConfig.teams.find((team) => team.name === identityTeam);
   const selectedIdentityTeam = draftConfig.teams.find((team) => team.name === identityTeam);
+  const selectedReservedName = draftConfig.reservedNames.find((name) => name === identityTeam);
+  const selectedIdentityName = selectedIdentityTeam?.manager?.trim() || selectedReservedName?.trim() || '';
+  const yourIdentityName = yourTeam?.manager?.trim() || (draftConfig.reservedNames.includes(identityTeam) ? identityTeam : 'Joined live');
   const yourPick = drafted.find((team) => team.name === identityTeam)?.pick;
   const expectedPick = yourTeam ? reservedSpots + Math.max(1, Math.round((yourTeam.standing / (lotteryTeams + 1)) * lotteryTeams)) : null;
   const receiptLabel = yourPick && expectedPick
@@ -495,20 +498,27 @@ export default function NFLDraftAnimator() {
           className="w-full max-w-lg bg-slate-800/70 rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-2xl"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!selectedIdentityTeam?.manager?.trim() || !identityTeam) return;
-            sendIdentity({ name: selectedIdentityTeam.manager.trim(), teamName: identityTeam });
+            if (!selectedIdentityName || !identityTeam) return;
+            sendIdentity({ name: selectedIdentityName, teamName: identityTeam });
           }}
         >
           <div className="text-5xl mb-4 text-center">🏈</div>
           <h2 className="text-3xl font-bold text-center mb-2">Claim your seat</h2>
-          <p className="text-slate-300 text-center mb-6">Choose the team you manage. Your configured manager name will identify you throughout the draft.</p>
-          <label className="block text-sm text-slate-300 mb-2">Claim your team</label>
+          <p className="text-slate-300 text-center mb-6">Choose the team or reserved spot you manage. Your configured identity will identify you throughout the draft.</p>
+          <label className="block text-sm text-slate-300 mb-2">Claim your team or reserved spot</label>
           <select value={identityTeam} onChange={(event) => setIdentityTeam(event.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-4 text-white">
-            <option value="">Choose a team</option>
-            {draftConfig.teams.map((team) => <option key={team.name} value={team.name}>{team.manager} · {team.name}</option>)}
+            <option value="">Choose a team or reserved spot</option>
+            <optgroup label="Lottery teams">
+              {draftConfig.teams.map((team) => <option key={team.name} value={team.name}>{team.manager} · {team.name}</option>)}
+            </optgroup>
+            {draftConfig.reservedNames.length > 0 && (
+              <optgroup label="Reserved spots">
+                {draftConfig.reservedNames.map((reservedName, index) => <option key={`${reservedName}-${index}`} value={reservedName}>{reservedName} · Reserved spot {index + 1}</option>)}
+              </optgroup>
+            )}
           </select>
           {identityError && <p className="text-red-300 text-sm mb-4">{identityError}</p>}
-          <button type="submit" disabled={!selectedIdentityTeam?.manager?.trim() || !identityTeam} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl px-5 py-4 font-bold text-lg">Claim team and join</button>
+          <button type="submit" disabled={!selectedIdentityName || !identityTeam} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl px-5 py-4 font-bold text-lg">Claim spot and join</button>
         </form>
       </div>
     );
@@ -555,7 +565,7 @@ export default function NFLDraftAnimator() {
               {hasJoinedRoom && identityTeam && (
                 <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 bg-purple-900/50 rounded-xl px-4 py-2 border border-purple-600">
                   <Users className="w-4 h-4 text-purple-400" />
-                  <span className="text-purple-300">{yourTeam?.manager || yourTeam?.name || 'Joined live'} · {yourTeam?.name || identityTeam}</span>
+                  <span className="text-purple-300">{yourIdentityName} · {yourTeam?.name || (draftConfig.reservedNames.includes(identityTeam) ? `Reserved spot ${draftConfig.reservedNames.indexOf(identityTeam) + 1}` : identityTeam)}</span>
                   {isViewer && <span className="text-purple-200 text-sm">{viewerCount} watching</span>}
                 </div>
               )}

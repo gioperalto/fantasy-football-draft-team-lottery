@@ -220,7 +220,12 @@ wss.on('connection', (ws) => {
           const identity = message.identity || {};
           const teamName = typeof identity.teamName === 'string' ? identity.teamName.trim() : '';
           const team = room.state?.draftConfig?.teams?.find((candidate) => candidate.name === teamName);
-          if (!team || !team.manager || identity.name !== team.manager) {
+          const reservedNames = room.state?.draftConfig?.reservedNames || [];
+          const reservedClaim = reservedNames.includes(teamName);
+          const isValidClaim = team
+            ? Boolean(team.manager) && identity.name === team.manager
+            : reservedClaim && identity.name === teamName;
+          if (!isValidClaim) {
             ws.send(JSON.stringify({
               type: 'IDENTITY_REJECTED',
               message: 'Choose one of the configured teams to claim your seat.',
