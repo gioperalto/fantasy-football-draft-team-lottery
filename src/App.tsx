@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Trophy, ChevronLeft, ChevronRight, Settings, Users, Copy, Check, Link } from 'lucide-react';
 import type { Team } from './interfaces/Team';
 import DraftSetup from './components/DraftSetup';
+import DraftMusic from './components/DraftMusic';
 import { useWebSocket } from './contexts/WebSocketContext';
 import './App.css';
 
@@ -72,7 +73,9 @@ export default function NFLDraftAnimator() {
   const [savingResult, setSavingResult] = useState(false);
   const [resultSaveError, setResultSaveError] = useState<string | null>(null);
   const [showRedraftWarning, setShowRedraftWarning] = useState(false);
+  const [victoryTrigger, setVictoryTrigger] = useState(0);
   const lastSavedResult = useRef<string | null>(null);
+  const lastLuckyReceipt = useRef<string | null>(null);
 
   // Determine if we're in viewer mode (joined via URL with code)
   const isViewer = !!code && !isHost;
@@ -194,6 +197,8 @@ export default function NFLDraftAnimator() {
     setLotteryOdds([]);
     setTotalDrawings(0);
     setCarouselIndex(0);
+    setHasJoinedRoom(false);
+    lastLuckyReceipt.current = null;
 
     // Create WebSocket room
     const initialState: DraftState = {
@@ -390,6 +395,22 @@ export default function NFLDraftAnimator() {
     return () => window.clearTimeout(timer);
   }, [preDraftCountdown]);
 
+  useEffect(() => {
+    if (!draftConfig || isDrafting || drafted.length !== draftConfig.lotteryTeams || !identityTeam) return;
+
+    const reservedSpots = draftConfig.totalTeams - draftConfig.lotteryTeams;
+    const yourTeam = draftConfig.teams.find((team) => team.name === identityTeam);
+    const yourPick = drafted.find((team) => team.name === identityTeam)?.pick;
+    if (!yourTeam || !yourPick) return;
+
+    const expectedPick = reservedSpots + Math.max(1, Math.round((yourTeam.standing / (draftConfig.lotteryTeams + 1)) * draftConfig.lotteryTeams));
+    const receiptKey = JSON.stringify({ draftName: draftConfig.draftName, identityTeam, drafted });
+    if (yourPick < expectedPick && lastLuckyReceipt.current !== receiptKey) {
+      lastLuckyReceipt.current = receiptKey;
+      setVictoryTrigger((trigger) => trigger + 1);
+    }
+  }, [draftConfig, drafted, identityTeam, isDrafting]);
+
   // Show error if WebSocket connection failed for viewers
   if (isViewer && wsError) {
     return (
@@ -467,7 +488,7 @@ export default function NFLDraftAnimator() {
       ? 'That pick hurt. Rage responsibly, then start plotting the comeback.'
       : 'No miracles, no disasters. You drafted almost exactly on schedule.';
 
-  if (isViewer && !hasJoinedRoom) {
+  if (!hasJoinedRoom) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4 flex items-center justify-center">
         <form
@@ -509,6 +530,7 @@ export default function NFLDraftAnimator() {
               </div>
               <h3 className="text-2xl text-slate-400 mt-2 font-bold">2026 Draft</h3>
               <p className="text-blue-300 text-lg">Weighted lottery based on standings!</p>
+              <DraftMusic victoryTrigger={victoryTrigger} />
 
               {/* Room info for host */}
               {isHost && roomCode && (

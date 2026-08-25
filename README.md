@@ -13,6 +13,7 @@ A sleek, animated draft lottery application for fantasy football leagues. Turn y
 - **Manager Identity**: Join with a display name, claim a manager seat, and receive a personal draft position receipt
 - **Team Customization**: Personalize each team with custom names, manager names, uploaded images, icons (30 emoji options), and colors (15 color options)
 - **Draft Receipts**: See whether the lottery treated you as lucky, unlucky, or right on expectation
+- **Personal Draft Music**: Every participant can independently toggle looping Stadium Hype, Draft Tension, Lo-fi Draft, or Victory music, with a saved local volume preference; playback is off by default
 - **Preview Mode**: Preview your draft setup before committing to the lottery
 - **Dramatic Finale**: The final two picks are revealed simultaneously for maximum suspense
 - **Live Viewing**: Share a unique 6-character room code so league members can watch the draft in real-time
@@ -111,6 +112,7 @@ Completed results are available at `/results/<room-code>`. A completed redraft i
    - A unique 6-character room code will be generated
    - Share this code or the full URL with your league members
    - Click "Begin Draft" when everyone has joined
+   - Use the **Draft Music** control at the top of the room to choose a soundtrack and toggle it on; each viewer controls their own playback
 
 5. **Re-run if Needed**
    - Use "Draft Again?" to re-run the lottery with the same settings
@@ -125,6 +127,7 @@ Completed results are available at `/results/<room-code>`. A completed redraft i
 2. **Watch Live**
    - The draft will sync in real-time with the host
    - You'll see the countdown, picks, and odds update live
+   - Use **Draft Music** to choose and independently loop a soundtrack in your browser
    - A "Watching Live" badge indicates you're connected
 
 ## Environment Variables

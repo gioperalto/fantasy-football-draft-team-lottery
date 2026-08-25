@@ -1,0 +1,39 @@
+{
+  "license": "Mixkit Stock Music Free License",
+  "licenseUrl": "https://mixkit.co/license/#musicFree",
+  "source": "https://mixkit.co/free-stock-music/",
+  "tracks": [
+    {
+      "id": "stadium-hype",
+      "displayName": "Stadium Hype",
+      "sourceTitle": "Sports Highlights",
+      "artist": "Ahjay Stelino",
+      "sourceUrl": "https://mixkit.co/free-stock-music/rock/",
+      "downloadUrl": "https://assets.mixkit.co/music/51/51.mp3"
+    },
+    {
+      "id": "draft-tension",
+      "displayName": "Draft Tension",
+      "sourceTitle": "K.O.",
+      "artist": "Michael Ramir C.",
+      "sourceUrl": "https://mixkit.co/free-stock-music/rock/",
+      "downloadUrl": "https://assets.mixkit.co/music/1068/1068.mp3"
+    },
+    {
+      "id": "lofi-draft",
+      "displayName": "Lo-fi Draft",
+      "sourceTitle": "Sweet September",
+      "artist": "Arulo",
+      "sourceUrl": "https://mixkit.co/free-stock-music/lo-fi-beats/",
+      "downloadUrl": "https://assets.mixkit.co/music/282/282.mp3"
+    },
+    {
+      "id": "victory",
+      "displayName": "Victory",
+      "sourceTitle": "Proud of You",
+      "artist": "Michael Ramir C.",
+      "sourceUrl": "https://mixkit.co/free-stock-music/rock/",
+      "downloadUrl": "https://assets.mixkit.co/music/1117/1117.mp3"
+    }
+  ]
+}
