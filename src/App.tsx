@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Play, Trophy, ChevronLeft, ChevronRight, Settings, Users, Copy, Check, Link } from 'lucide-react';
 import type { Team } from './interfaces/Team';
 import DraftSetup from './components/DraftSetup';
@@ -41,7 +41,6 @@ interface DraftState {
 
 export default function NFLDraftAnimator() {
   const { code } = useParams<{ code?: string }>();
-  const navigate = useNavigate();
   const {
     isHost,
     roomCode,
@@ -172,12 +171,9 @@ export default function NFLDraftAnimator() {
       .finally(() => setSavingResult(false));
   }, [isHost, roomCode, draftConfig, drafted, isDrafting]);
 
-  // Navigate to draft URL when room is created
-  useEffect(() => {
-    if (roomCode && isHost && !code) {
-      navigate(`/draft/${roomCode}`, { replace: true });
-    }
-  }, [roomCode, isHost, code, navigate]);
+  // Keep the host on this mounted draft screen after room creation. Navigating
+  // from `/` to `/draft/:code` would remount App and discard the setup state;
+  // viewers still use the share link generated from roomCode.
 
   const handleStartDraft = (
     teams: Team[],
