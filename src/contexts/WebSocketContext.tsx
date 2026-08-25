@@ -184,10 +184,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [isHost]);
 
   const sendIdentity = useCallback((identity: { name: string; teamName?: string }) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && !isHost) {
-      wsRef.current.send(JSON.stringify({ type: 'JOIN_IDENTITY', identity }));
-    }
-  }, [isHost]);
+    const attemptSend = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'JOIN_IDENTITY', identity }));
+      } else {
+        setTimeout(attemptSend, 100);
+      }
+    };
+
+    attemptSend();
+  }, []);
 
   useEffect(() => {
     return () => {

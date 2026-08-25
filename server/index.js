@@ -213,12 +213,12 @@ wss.on('connection', (ws) => {
         }
 
         case 'JOIN_IDENTITY': {
-          if (!currentRoom || isHost) return;
+          if (!currentRoom) return;
           const room = rooms.get(currentRoom);
           if (!room) return;
           room.participants = room.participants || new Map();
           room.participants.set(ws, message.identity || {});
-          if (room.host.readyState === 1) {
+          if (!isHost && room.host.readyState === 1) {
             room.host.send(JSON.stringify({
               type: 'PARTICIPANT_JOINED',
               identity: message.identity || {},
