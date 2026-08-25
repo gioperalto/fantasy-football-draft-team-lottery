@@ -79,7 +79,11 @@ export default function DraftSetup({ onStartDraft }: DraftSetupProps) {
     );
   };
 
+  const normalizedManagers = teams.map((team) => team.manager?.trim().toLowerCase() || '');
+  const hasUniqueManagers = new Set(normalizedManagers).size === normalizedManagers.length;
   const isValid = teams.every(t => t.name.trim() !== '') &&
+    teams.every(t => t.manager?.trim() !== '') &&
+    hasUniqueManagers &&
     teams.every(t => t.standing >= 1) &&
     reservedNames.every(name => name.trim() !== '') &&
     draftName.trim() !== '';

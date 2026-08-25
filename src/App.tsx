@@ -48,6 +48,8 @@ export default function NFLDraftAnimator() {
     viewerCount,
     remoteState,
     error: wsError,
+    identityError,
+    identityAccepted,
     createRoom,
     joinRoom,
     broadcastState,
@@ -64,7 +66,6 @@ export default function NFLDraftAnimator() {
   const [lotteryOdds, setLotteryOdds] = useState<LotteryOdds[]>([]);
   const [totalDrawings, setTotalDrawings] = useState(0);
   const [preDraftCountdown, setPreDraftCountdown] = useState<number | null>(null);
-  const [identityName, setIdentityName] = useState('');
   const [identityTeam, setIdentityTeam] = useState('');
   const [hasJoinedRoom, setHasJoinedRoom] = useState(!code);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -88,10 +89,8 @@ export default function NFLDraftAnimator() {
   }, [code, roomCode, joinRoom]);
 
   useEffect(() => {
-    if (!code) return;
-    const nameFromUrl = new URLSearchParams(window.location.search).get('name');
-    if (nameFromUrl) setIdentityName(nameFromUrl.slice(0, 40));
-  }, [code]);
+    if (identityAccepted) setHasJoinedRoom(true);
+  }, [identityAccepted]);
 
   // Sync remote state for viewers
   useEffect(() => {
@@ -477,6 +476,7 @@ export default function NFLDraftAnimator() {
   const completedBoardItems = [...allDraftedWithReserved].sort((a, b) => a.pick - b.pick);
   const isDraftComplete = !isDrafting && drafted.length === lotteryTeams;
   const yourTeam = draftConfig.teams.find((team) => team.name === identityTeam);
+  const selectedIdentityTeam = draftConfig.teams.find((team) => team.name === identityTeam);
   const yourPick = drafted.find((team) => team.name === identityTeam)?.pick;
   const expectedPick = yourTeam ? reservedSpots + Math.max(1, Math.round((yourTeam.standing / (lotteryTeams + 1)) * lotteryTeams)) : null;
   const receiptLabel = yourPick && expectedPick
@@ -495,23 +495,20 @@ export default function NFLDraftAnimator() {
           className="w-full max-w-lg bg-slate-800/70 rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-2xl"
           onSubmit={(event) => {
             event.preventDefault();
-            const name = identityName.trim();
-            if (!name || !identityTeam) return;
-            sendIdentity({ name, teamName: identityTeam });
-            setHasJoinedRoom(true);
+            if (!selectedIdentityTeam?.manager?.trim() || !identityTeam) return;
+            sendIdentity({ name: selectedIdentityTeam.manager.trim(), teamName: identityTeam });
           }}
         >
           <div className="text-5xl mb-4 text-center">🏈</div>
           <h2 className="text-3xl font-bold text-center mb-2">Claim your seat</h2>
-          <p className="text-slate-300 text-center mb-6">Pick a name and manager identity. When the lottery lands, we’ll tell you exactly where you stand.</p>
-          <label className="block text-sm text-slate-300 mb-2">Your name</label>
-          <input value={identityName} onChange={(event) => setIdentityName(event.target.value)} maxLength={40} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-4 text-white" placeholder="e.g. Giovanni" autoFocus />
-          <label className="block text-sm text-slate-300 mb-2">Join as manager</label>
-          <select value={identityTeam} onChange={(event) => setIdentityTeam(event.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-6 text-white">
-            <option value="">Choose a manager</option>
-            {draftConfig.teams.map((team) => <option key={team.name} value={team.name}>{team.manager || team.name} · {team.name}</option>)}
+          <p className="text-slate-300 text-center mb-6">Choose the team you manage. Your configured manager name will identify you throughout the draft.</p>
+          <label className="block text-sm text-slate-300 mb-2">Claim your team</label>
+          <select value={identityTeam} onChange={(event) => setIdentityTeam(event.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 mb-4 text-white">
+            <option value="">Choose a team</option>
+            {draftConfig.teams.map((team) => <option key={team.name} value={team.name}>{team.manager} · {team.name}</option>)}
           </select>
-          <button type="submit" disabled={!identityName.trim() || !identityTeam} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl px-5 py-4 font-bold text-lg">Join the draft</button>
+          {identityError && <p className="text-red-300 text-sm mb-4">{identityError}</p>}
+          <button type="submit" disabled={!selectedIdentityTeam?.manager?.trim() || !identityTeam} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl px-5 py-4 font-bold text-lg">Claim team and join</button>
         </form>
       </div>
     );
@@ -555,11 +552,11 @@ export default function NFLDraftAnimator() {
               )}
 
               {/* Viewer badge */}
-              {isViewer && (
+              {hasJoinedRoom && identityTeam && (
                 <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 bg-purple-900/50 rounded-xl px-4 py-2 border border-purple-600">
                   <Users className="w-4 h-4 text-purple-400" />
-                  <span className="text-purple-300">{identityName} · {yourTeam?.manager || yourTeam?.name || 'Joined live'}</span>
-                  <span className="text-purple-200 text-sm">{viewerCount} watching</span>
+                  <span className="text-purple-300">{yourTeam?.manager || yourTeam?.name || 'Joined live'} · {yourTeam?.name || identityTeam}</span>
+                  {isViewer && <span className="text-purple-200 text-sm">{viewerCount} watching</span>}
                 </div>
               )}
 

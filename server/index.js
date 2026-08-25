@@ -216,8 +216,32 @@ wss.on('connection', (ws) => {
           if (!currentRoom) return;
           const room = rooms.get(currentRoom);
           if (!room) return;
+
+          const identity = message.identity || {};
+          const teamName = typeof identity.teamName === 'string' ? identity.teamName.trim() : '';
+          const team = room.state?.draftConfig?.teams?.find((candidate) => candidate.name === teamName);
+          if (!team || !team.manager || identity.name !== team.manager) {
+            ws.send(JSON.stringify({
+              type: 'IDENTITY_REJECTED',
+              message: 'Choose one of the configured teams to claim your seat.',
+            }));
+            return;
+          }
+
           room.participants = room.participants || new Map();
-          room.participants.set(ws, message.identity || {});
+          const existingClaim = [...room.participants.entries()].find(([participant, participantIdentity]) =>
+            participant !== ws && participantIdentity.teamName === teamName
+          );
+          if (existingClaim) {
+            ws.send(JSON.stringify({
+              type: 'IDENTITY_REJECTED',
+              message: 'That team has already been claimed by another participant.',
+            }));
+            return;
+          }
+
+          room.participants.set(ws, identity);
+          ws.send(JSON.stringify({ type: 'IDENTITY_ACCEPTED', identity }));
           if (!isHost && room.host.readyState === 1) {
             room.host.send(JSON.stringify({
               type: 'PARTICIPANT_JOINED',

@@ -31,6 +31,8 @@ interface WebSocketContextType {
   viewerCount: number;
   remoteState: DraftState | null;
   error: string | null;
+  identityError: string | null;
+  identityAccepted: boolean;
   createRoom: (initialState: DraftState) => void;
   joinRoom: (code: string) => void;
   broadcastState: (state: DraftState) => void;
@@ -59,6 +61,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [viewerCount, setViewerCount] = useState(0);
   const [remoteState, setRemoteState] = useState<DraftState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [identityError, setIdentityError] = useState<string | null>(null);
+  const [identityAccepted, setIdentityAccepted] = useState(false);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -120,6 +124,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
           case 'ERROR':
             setError(message.message);
+            break;
+
+          case 'IDENTITY_ACCEPTED':
+            setIdentityError(null);
+            setIdentityAccepted(true);
+            break;
+
+          case 'IDENTITY_REJECTED':
+            setIdentityAccepted(false);
+            setIdentityError(message.message);
             break;
         }
       } catch (err) {
@@ -184,6 +198,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [isHost]);
 
   const sendIdentity = useCallback((identity: { name: string; teamName?: string }) => {
+    setIdentityError(null);
+    setIdentityAccepted(false);
+
     const attemptSend = () => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'JOIN_IDENTITY', identity }));
@@ -210,6 +227,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         viewerCount,
         remoteState,
         error,
+        identityError,
+        identityAccepted,
         createRoom,
         joinRoom,
         broadcastState,
